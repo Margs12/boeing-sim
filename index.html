@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Horizon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+/* ===== THEME: change these to match the deck ===== */
+:root{
+  --bg:#0a2540;        /* page ground (navy) */
+  --panel:#10305a;     /* cards */
+  --panel2:#163a6b;    /* raised / hover */
+  --line:#24508a;      /* borders */
+  --ink:#ffffff;       /* main text */
+  --mute:#a9c1de;      /* secondary text */
+  --sky:#8fd3ff;       /* data / accent */
+  --good:#5be3a6;      /* positive deltas */
+  --danger:#ff5c8a;    /* fired risk, crash */
+  --font:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--font);overflow-x:clip}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:14px max(3vw,16px);border-bottom:1px solid var(--line)}
+header h1{font-size:20px;margin:0;font-weight:800;letter-spacing:-.01em}
+header .sub{color:var(--mute);font-size:14px}
+.demo{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 16px;min-height:44px}
+.btn:hover{border-color:var(--sky)}
+.btn.primary{background:var(--sky);color:#06203a;border-color:var(--sky);font-weight:800}
+.btn.small{min-height:36px;padding:6px 12px;font-size:14px}
+.wrap{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:20px;padding:20px max(3vw,16px);max-width:1400px;margin:0 auto}
+@media(max-width:900px){.wrap{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:clamp(16px,2.4vw,28px)}
+.label{color:var(--mute);font-size:13px}
+h2{font-size:clamp(26px,3.4vw,40px);line-height:1.08;margin:6px 0 12px;text-wrap:balance;font-weight:800;letter-spacing:-.015em}
+h3{font-size:18px;margin:0 0 8px}
+p{margin:0 0 12px;max-width:70ch}
+.meters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+@media(max-width:560px){.meters{grid-template-columns:minmax(0,1fr)}}
+.meter{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px}
+.meter .v{font-size:clamp(26px,3vw,34px);font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bar{height:10px;border-radius:6px;background:#0a2540;overflow:hidden;margin-top:8px}
+.bar>i{display:block;height:100%;background:var(--sky);transition:width .6s}
+.bar.risk>i{background:linear-gradient(90deg,#ffb3c7,var(--danger))}
+.up{color:var(--good)}.down{color:var(--danger)}
+.timer{display:flex;align-items:center;gap:12px;margin:4px 0 16px}
+.timer .bar{flex:1;margin:0}
+.timer b{font-size:22px;width:3ch;text-align:right;font-variant-numeric:tabular-nums}
+.tag{display:inline-block;font-size:13px;color:var(--sky);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+.memo{border-left:3px solid var(--danger);background:#0c2a4d;padding:10px 14px;border-radius:0 10px 10px 0;margin:14px 0 18px}
+.memo .from{font-size:13px;color:var(--mute)}
+.shock{background:#3a1430;border:1px solid var(--danger);border-radius:10px;padding:10px 14px;margin-bottom:12px}
+.opts{display:grid;gap:10px}
+.opt{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;align-items:center;text-align:left;background:var(--panel2);border:2px solid var(--line);border-radius:14px;padding:14px 16px;min-height:64px}
+.opt:hover{border-color:var(--sky);transform:translateY(-1px)}
+.opt .k{display:grid;place-items:center;width:40px;height:40px;border-radius:10px;background:var(--sky);color:#06203a;font-weight:800;font-size:20px}
+.opt strong{display:block;font-size:17px}
+.opt span{color:var(--mute);font-size:14px}
+.locked{text-align:center;padding:30px 10px}
+.locked .big{font-size:22px;font-weight:800}
+table{width:100%;border-collapse:collapse}
+td,th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;font-size:15px}
+th{color:var(--mute);font-weight:400;font-size:13px}
+td.n,th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.side h3{display:flex;justify-content:space-between;align-items:baseline}
+.count{font-size:clamp(40px,5vw,64px);font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.row-you td{color:var(--sky);font-weight:600}
+.out td{color:var(--mute)}.out td:nth-child(2),.out td:nth-child(3){text-decoration:line-through}
+.chip{font-size:12px;border-radius:6px;padding:2px 7px;background:#0a2540;border:1px solid var(--line);white-space:nowrap}
+.chip.ok{color:var(--good);border-color:var(--good)}
+.chip.fired{color:var(--danger);border-color:var(--danger)}
+.ending-letter{font-size:clamp(72px,10vw,120px);font-weight:800;line-height:1;color:var(--sky)}
+.ending-letter.bad{color:var(--danger)}
+.link{background:#0c2a4d;border-radius:12px;padding:12px 16px;margin:14px 0}
+.reveal .bar{height:18px}
+.reveal .bar>i{transition:width 2.2s cubic-bezier(.2,.8,.2,1);background:linear-gradient(90deg,var(--good),#ffd166 45%,var(--danger) 70%)}
+.fig{position:relative;min-height:360px;margin:8px 0 16px}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.prompts li{margin-bottom:10px;font-size:18px}
+input[type=text]{font:inherit;font-size:18px;background:#0a2540;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-height:44px;width:min(320px,100%)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:16px 0}
+.mini{background:var(--panel2);border-radius:12px;padding:12px 14px;font-size:15px}
+.note{font-size:13px;color:var(--mute)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+.narrow{max-width:760px;margin:0 auto}
+.conn{font-size:13px;border-radius:999px;padding:4px 10px;border:1px solid var(--line)}
+.conn.ok{color:var(--good);border-color:var(--good)}.conn.bad{color:var(--danger);border-color:var(--danger)}
+#controls{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.btn.ghost{background:transparent;color:var(--mute)}
+.wrap1{padding:20px max(3vw,16px);max-width:1500px;margin:0 auto}
+.opt.sel{border-color:var(--sky)}
+.opts.static .opt{cursor:default}.opts.static .opt:hover{transform:none;border-color:var(--line)}
+form input{display:block;margin-top:4px}
+.hostgrid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:20px}
+@media(max-width:900px){.hostgrid{grid-template-columns:minmax(0,1fr)}}
+body.host{font-size:19px}
+body.host .big{font-size:clamp(20px,1.6vw,26px)}
+body.host h2.huge{font-size:clamp(34px,3.6vw,56px)}
+body.host .lb td{font-size:clamp(16px,1.3vw,22px);padding:10px 6px}
+.small{font-size:.8em}.sky{color:var(--sky)}
+.code{font-size:1.6em;letter-spacing:.06em;color:var(--sky)}
+.qr{display:grid;place-items:center;background:#fff}
+.qr svg{width:100%;max-width:420px;height:auto}
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.gchip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:8px 8px 8px 16px;font-size:18px;display:inline-flex;align-items:center;gap:6px}
+.x{background:none;border:0;color:var(--mute);font-size:20px;width:32px;height:32px;border-radius:50%}
+.x:hover{color:var(--danger)}
+td.boeing,span.boeing{color:var(--danger);font-weight:800}
+.count{font-size:clamp(56px,7vw,110px);font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<header>
+  <h1>Project Horizon</h1>
+  <span class="sub" id="sub"></span>
+  <span class="conn" id="conn">Connecting…</span>
+  <div id="controls"></div>
+</header>
+<div class="wrap1"><main id="main"></main></div>
+
+<script>
+/* =====================================================================
+   FIREBASE: paste your web-app config here (Firebase console > Project
+   settings > Your apps). Leave apiKey empty for one-browser demo mode.
+   ===================================================================== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCPLtQR6nf8XauxZc1SkEKG6bB5OhXTcKI",
+  authDomain: "project-horizon-boeing.firebaseapp.com",
+  databaseURL: "https://project-horizon-boeing-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "project-horizon-boeing",
+  appId: "1:145172559863:web:62715331bae7a2d40d20f2"
+};
+</script>
+<script>
+/* =====================================================================
+   GAME CONFIG: everything that controls balance lives here.
+   Host (projector):  index.html?host
+   Players:           index.html?s=MAX737   (or open index.html and type the code)
+   ===================================================================== */
+const CONFIG = {
+  sessionCode: "MAX737",             // game code on the projector and in the QR link
+  leaderboardRows: 10,               // rows shown on the projector leaderboard
+  scatterLabelMax: 8,                // name the dots on the reveal chart only up to this many players
+  roundSeconds: 45,
+  timeoutDefault: "street",          // if a group doesn't decide, the board decides
+  shuffleOptions: true,
+  start: { stock: 100, fired: 20, safety: 0 },
+  pressure: {
+    targetStart: 100,                // Wall Street target before round 1
+    targetStep: 7,                   // target rises this much every round
+    firedPerDollarGap: 0.4,          // fired risk added per $ below target
+    firedGapCap: 12,                 // max fired risk added from the gap per round
+    beatTargetRelief: 4,             // fired risk removed when stock >= target
+    firedLimit: 100
+  },
+  shocks: {                          // key = round number (1-based), applied at round start
+    4: { text: "Market shock: Airbus books a record order. Analysts downgrade Boeing.", stock: -6 }
+  },
+  /* bots only used by the offline demo file */
+  bots: {
+    names: ["Group 2", "Group 3", "Group 4", "Group 5"],
+    profiles: {                      // weights for [street, middle, engineer]
+      "Wall Street": [0.65, 0.25, 0.10],
+      "Pragmatists": [0.35, 0.45, 0.20],
+      "Engineers":   [0.15, 0.35, 0.50]
+    },
+    panicAbove: 65,                  // bots above this fired risk lean towards street
+    lockWindow: [0.25, 0.9]          // bots lock in between 25% and 90% of the timer
+  },
+  rounds: [
+    { part: "Roots", title: "The cash pile",
+      scenario: "Boeing has $10B in free cash. Your largest shareholders want it back now. Engineering wants it for the next aircraft and for struggling suppliers.",
+      memo: { from: "Activist investor", text: "Every dollar you don't return is a dollar you're wasting. Our patience is limited." },
+      options: {
+        street:   { label: "Return it all", detail: "Buybacks and dividends. EPS jumps, analysts cheer.", stock: 15, fired: 0, safety: 10 },
+        middle:   { label: "Split it 50/50", detail: "Half to shareholders, half to R&D.", stock: 6, fired: 0, safety: 4 },
+        engineer: { label: "Fund R&D and suppliers", detail: "Invest in the next generation. Shareholders grumble.", stock: -4, fired: 5, safety: 0 }
+      },
+      boeing: { choice: "street", fact: "Boeing returned about $60.5B to shareholders through buybacks and dividends while cutting R&D and supplier budgets." } },
+
+    { part: "Strategy", title: "Airbus strikes",
+      scenario: "Airbus launches a fuel-efficient new jet. A major US airline is about to order hundreds from Airbus. A new design takes ~10 years. Re-engining your decades-old 737 takes ~5.",
+      memo: { from: "CFO", text: "A clean sheet means a decade of capex and no answer to Airbus. The Street will punish us." },
+      options: {
+        street:   { label: "Re-engine the 737 now", detail: "Bigger engines on an old airframe. Handling quirks get fixed in software.", stock: 12, fired: 0, safety: 15 },
+        middle:   { label: "Re-engine, plus a year of testing", detail: "Same plan, more margin for error. Later to market.", stock: 4, fired: 5, safety: 7 },
+        engineer: { label: "Design a new aircraft", detail: "The right plane, a decade away. Airbus wins the next orders.", stock: -10, fired: 15, safety: 0 }
+      },
+      boeing: { choice: "street", fact: "In 2011 Boeing re-engined the 737 (the MAX) instead of designing a new plane. The larger engines changed its handling, which MCAS was built to mask." } },
+
+    { part: "Strategy & Culture", title: "More for less",
+      scenario: "Margins lag Airbus. Consultants propose: rank every employee and cut the bottom 10%, demand 15% price cuts from suppliers, and replace “Boeing family” with “team”.",
+      memo: { from: "COO", text: "Families protect their weakest members. Teams cut them." },
+      options: {
+        street:   { label: "Run the full program", detail: "Rank-and-yank, supplier squeeze, new language.", stock: 10, fired: 0, safety: 10 },
+        middle:   { label: "Hiring freeze only", detail: "Save money quietly. No layoffs.", stock: 4, fired: 0, safety: 4 },
+        engineer: { label: "Hire more quality inspectors", detail: "Costs rise. Quality improves.", stock: -5, fired: 5, safety: -3 }
+      },
+      boeing: { choice: "street", fact: "Under “more for less”, Boeing ranked and cut staff, pressed suppliers for steep price cuts, and replaced “family” with “team”." } },
+
+    { part: "Collapse", title: "One sensor or two",
+      scenario: "New flight-control software (MCAS) pushes the nose down if it senses a stall. One angle-of-attack sensor is cheaper and keeps the system “minor” for certification. Two sensors mean more engineering and maybe extra pilot training.",
+      memo: { from: "Program director", text: "No change that triggers new pilot training. The delivery date is fixed." },
+      options: {
+        street:   { label: "One sensor; warning light as a paid extra", detail: "Cheapest, fastest. Airlines can buy the alert.", stock: 8, fired: 0, safety: 20, flags: ["singleSensor"] },
+        middle:   { label: "Two sensors; warning light optional", detail: "Redundancy, but pilots may not see a disagreement.", stock: 3, fired: 0, safety: 8 },
+        engineer: { label: "Two sensors and a standard warning light", detail: "Full redundancy. Schedule slips.", stock: -6, fired: 8, safety: 0 }
+      },
+      boeing: { choice: "street", fact: "MCAS relied on a single angle-of-attack sensor. The sensor-disagree alert only worked on planes with an optional extra." } },
+
+    { part: "Culture", title: "Certify and train",
+      scenario: "Airlines buy only if pilots can switch to the new plane without simulator training. One customer gets $1M per plane back if it's required. The FAA lets your own staff certify most of the work.",
+      memo: { from: "Head of Sales", text: "No simulator training saves us and our customers hundreds of millions. That IS the pitch." },
+      options: {
+        street:   { label: "Self-certify; no simulator training", detail: "Fast approval. Pilots get an iPad course.", stock: 12, fired: 0, safety: 20, flags: ["noTraining", "selfCert"] },
+        middle:   { label: "Self-certify; recommend simulator training", detail: "Fast approval, softer sales pitch.", stock: 2, fired: 5, safety: 8, flags: ["selfCert"] },
+        engineer: { label: "Full FAA review and mandatory simulator", detail: "Slower. Customers threaten to walk.", stock: -10, fired: 12, safety: 0 }
+      },
+      boeing: { choice: "street", fact: "About 96% of the work was self-certified. MCAS was left out of the pilot manual and no simulator training was required, saving about $400M." } },
+
+    { part: "Culture", title: "The email",
+      scenario: "An engineer writes internally that the plane is “designed by clowns, who in turn are supervised by monkeys” and wants to escalate software concerns. HR just ran a “Speak Up” campaign.",
+      memo: { from: "Program VP", text: "We're 8 weeks from delivery. One loud voice can sink the schedule. Remind him he's part of the team." },
+      options: {
+        street:   { label: "Remind him of team loyalty; move him off the program", detail: "Schedule protected. Message received by everyone.", stock: 3, fired: 0, safety: 12, flags: ["retaliation"] },
+        middle:   { label: "Log the concern; fix it after delivery", detail: "On record, not on the schedule.", stock: 1, fired: 0, safety: 6 },
+        engineer: { label: "Pause deliveries and investigate", detail: "Costly delay. Engineers learn speaking up works.", stock: -12, fired: 15, safety: -10 }
+      },
+      boeing: { choice: "street", fact: "Internal concerns were sidelined and whistleblowers reported retaliation. The “clowns… monkeys” messages became public in 2020." } },
+
+    { part: "Collapse", title: "Nose-down",
+      scenario: "On a delivery flight, the plane pitches nose-down again and again. The crew recovers. Early data points to the flight-control software.",
+      variant: {                       // replaces the scenario if the group's hidden safety debt is high
+        when: t => t.safety >= 50,
+        title: "Crash in the Java Sea",
+        scenario: "One of your new aircraft crashes minutes after take-off. 189 people are dead. Early data points to the flight-control software, and to the pilots."
+      },
+      memo: { from: "General Counsel", text: "Grounding costs billions in lost deliveries. Our position: pilots should have followed existing procedures." },
+      options: {
+        street:   { label: "Blame pilot error; keep flying", detail: "Patch the software later.", stock: 2, fired: 0, safety: 25 },
+        middle:   { label: "Send airlines a safety bulletin; keep flying", detail: "Point to existing procedures.", stock: -3, fired: 3, safety: 10 },
+        engineer: { label: "Ground the fleet ourselves", detail: "Billions lost. Trust protected.", stock: -15, fired: 10, safety: -15 }
+      },
+      boeing: { choice: "middle", fact: "After Lion Air 610 (Oct 2018) Boeing issued a bulletin and kept flying. Ethiopian 302 crashed 5 months later. Regulators, not Boeing, grounded the MAX worldwide." } }
+  ],
+  // Evaluated top to bottom; first match wins. t = team state.
+  endings: [
+    { letter: "A", title: "Ousted Ethicist", bad: false, when: t => t.out && t.safety < 40,
+      text: "You protected the plane and lost your job. The board replaced you with someone who'd hit the number.",
+      link: "The double bind: speaking up was a career risk. Four CEOs, same playbook. The system selected for compliance." },
+    { letter: "B", title: "Fired Anyway", bad: true, when: t => t.out,
+      text: "You cut corners and still missed the target. The bar rose faster than you could cut.",
+      link: "Shareholder-value ideology: no amount of cost-cutting satisfies a target that rises every quarter." },
+    { letter: "J", title: "Grounded After One", bad: true, when: t => t.crashed && t.choices[6] === "engineer",
+      text: "One crash, then you grounded the fleet yourself. 189 people still died, but the second crash never happened.",
+      link: "Boeing waited. Ethiopian 302 crashed five months after Lion Air 610: 346 deaths in total." },
+    { letter: "C", title: "10 Seconds", bad: true, when: t => t.flags.has("singleSensor") && t.flags.has("noTraining"),
+      text: "One sensor, no simulator training. When the software fired, pilots had seconds to diagnose a system nobody had told them about.",
+      link: "MCAS on the 737 MAX: Lion Air 610 and Ethiopian 302, 346 deaths." },
+    { letter: "D", title: "Warnings Ignored", bad: true, when: t => t.flags.has("retaliation") && t.safety >= 70,
+      text: "Your engineers told you. You moved them off the program.",
+      link: "Retaliation and dangerous groups: concerns circulated among engineers but never reached anyone willing to hear them." },
+    { letter: "E", title: "Rich Until the Crash", bad: true, when: t => t.safety >= 70 || t.crashed,
+      text: "Your stock was the envy of Wall Street, until the crash. Then the grounding, the lawsuits and the investigations.",
+      link: "$60.5B returned to shareholders. After the crashes, Boeing lost tens of billions and its reputation." },
+    { letter: "F", title: "Regulator's Customer", bad: true, when: t => t.flags.has("selfCert") && t.safety >= 45,
+      text: "You certified your own homework. It passed.",
+      link: "About 96% self-certification. The FAA treated Boeing as a customer, not an applicant." },
+    { letter: "G", title: "Lucky, Not Good", bad: true, when: t => t.safety >= 45,
+      text: "No crash yet. The risks are still in the system.",
+      link: "Ethical blindness: the absence of disaster is read as proof the system works." },
+    { letter: "H", title: "Safe but Sinking", bad: false, when: t => t.stock < 110,
+      text: "Your plane is safe. Your stock lags, Airbus is winning, and the board is circling.",
+      link: "In a shareholder-value system, the context, not the person, sets the price of integrity." },
+    { letter: "I", title: "The Engineers' Boeing", bad: false, when: t => true,
+      text: "Safe aircraft and a healthy stock. Rare, and it took the right trade-offs at the right moments.",
+      link: "Pre-1997 Boeing: an engineering culture where safety wasn't a cost line." }
+  ],
+  crashLine: 70,                     // drawn on the debrief chart
+  debriefPrompts: [
+    "At which decision did the cheaper option start to feel normal?",
+    "Nobody in this room was a bad apple. So who made these decisions?",
+    "What would have to change (incentives, the freedom to speak up, oversight) for the safe choice to be the rational one?"
+  ]
+};
+</script>
+<script>
+{
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = n => "$" + Math.round(n).toLocaleString("en-US");
+const sgn = (n, f = x => x) => (n > 0 ? "+" : n < 0 ? "−" : "±") + f(Math.abs(n));
+const KEYS = ["street", "middle", "engineer"];
+const P = CONFIG.pressure;
+const NR = CONFIG.rounds.length;
+const target = r => P.targetStart + P.targetStep * (r + 1);
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const clean = v => JSON.parse(JSON.stringify(v === undefined ? null : v));
+const qs = new URLSearchParams(location.search);
+const IS_HOST = qs.has("host");
+const LIVE = !!(FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey);
+const endingBy = l => CONFIG.endings.find(e => e.letter === l);
+const baseUrl = location.origin + location.pathname;
+
+/* ---------------- backend: Firebase (live) or one-browser demo ---------------- */
+function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+let onConn = () => {};
+async function makeBackend() {
+  if (LIVE) {
+    const v = "10.12.2";
+    await loadScript(`https://www.gstatic.com/firebasejs/${v}/firebase-app-compat.js`);
+    await loadScript(`https://www.gstatic.com/firebasejs/${v}/firebase-database-compat.js`);
+    firebase.initializeApp(FIREBASE_CONFIG);
+    const db = firebase.database();
+    let offset = 0;
+    db.ref(".info/serverTimeOffset").on("value", s => offset = s.val() || 0);
+    db.ref(".info/connected").on("value", s => onConn(!!s.val()));
+    return { mode: "live", now: () => Date.now() + offset,
+      set: (p, v) => db.ref(p).set(clean(v)),
+      update: (p, o) => db.ref(p).update(clean(o)),
+      on: (p, cb) => { const r = db.ref(p), h = s => cb(s.val()); r.on("value", h); return () => r.off("value", h); } };
+  }
+  const KEY = "horizon-demo-db";
+  const ch = "BroadcastChannel" in window ? new BroadcastChannel("horizon-demo") : null;
+  const read = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
+  let data = read(); const subs = new Set();
+  const parts = p => p.split("/").filter(Boolean);
+  const getP = p => { let o = data; for (const k of parts(p)) { if (o == null) return null; o = o[k]; } return o === undefined ? null : clean(o); };
+  const setP = (p, v) => { const ks = parts(p); let o = data; for (let i = 0; i < ks.length - 1; i++) { if (typeof o[ks[i]] !== "object" || o[ks[i]] === null) o[ks[i]] = {}; o = o[ks[i]]; } const k = ks[ks.length - 1]; if (v === null || v === undefined) delete o[k]; else o[k] = clean(v); };
+  const emit = () => subs.forEach(s => s.cb(getP(s.p)));
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch {} if (ch) ch.postMessage(1); emit(); };
+  if (ch) ch.onmessage = () => { data = read(); emit(); };
+  setTimeout(() => onConn(true));
+  return { mode: "demo", now: () => Date.now(),
+    set: async (p, v) => { setP(p, v); save(); },
+    update: async (p, o) => { for (const k in o) setP(p + "/" + k, o[k]); save(); },
+    on: (p, cb) => { const s = { p, cb }; subs.add(s); setTimeout(() => cb(getP(p))); return () => subs.delete(s); } };
+}
+
+/* ---------------- shared game logic ---------------- */
+function team(id, raw) {
+  const t = Object.assign({ id, stock: CONFIG.start.stock, fired: CONFIG.start.fired, safety: CONFIG.start.safety, out: false, crashed: false, outRound: null }, raw || {});
+  t.flags = new Set(Object.keys((raw && raw.flags) || {}));
+  t.choices = Object.assign({}, (raw && raw.choices) || {});
+  return t;
+}
+function serialize(t) {
+  return { name: t.name, joined: t.joined || 0, stock: t.stock, fired: t.fired, safety: t.safety,
+    flags: Object.fromEntries([...t.flags].map(f => [f, true])), choices: t.choices,
+    out: !!t.out, outRound: t.outRound ?? null, crashed: !!t.crashed, last: t.last || null, ending: t.ending || null };
+}
+const teamsOf = ses => Object.entries((ses && ses.teams) || {}).map(([id, r]) => team(id, r)).sort((a, b) => (a.joined || 0) - (b.joined || 0));
+const picksFor = (ses, r) => (ses && ses.picks && ses.picks[r]) || {};
+
+function applyRound(t, r, pick) {
+  const timedOut = !KEYS.includes(pick);
+  const k = timedOut ? CONFIG.timeoutDefault : pick;
+  const o = CONFIG.rounds[r].options[k];
+  const s0 = t.stock, f0 = t.fired;
+  t.stock = Math.max(1, t.stock + o.stock);
+  t.fired += o.fired; t.safety += o.safety;
+  (o.flags || []).forEach(f => t.flags.add(f));
+  t.choices[r] = k;
+  const gap = target(r) - t.stock;
+  t.fired += gap > 0 ? Math.min(P.firedGapCap, gap * P.firedPerDollarGap) : -P.beatTargetRelief;
+  t.fired = Math.max(0, Math.min(100, t.fired));
+  if (t.fired >= P.firedLimit) { t.out = true; t.outRound = r; }
+  t.last = { r, dStock: t.stock - s0, dFired: t.fired - f0, timedOut, pick: k };
+}
+
+/* ---------------- state ---------------- */
+let B, SES, SP, CODE, unsub = null;
+let pendingName = null, joinError = "";
+const store = LIVE ? localStorage : sessionStorage;   // demo: one team per tab
+const tidKey = c => "horizon-team-" + c;
+const myId = () => { try { return store.getItem(tidKey(CODE)); } catch { return null; } };
+const setMyId = v => { try { v ? store.setItem(tidKey(CODE), v) : store.removeItem(tidKey(CODE)); } catch {} };
+
+function subscribe(code) {
+  CODE = code.toUpperCase(); SP = "sessions/" + CODE; SES = undefined;
+  if (unsub) unsub();
+  unsub = B.on(SP, v => { SES = v; onSession(); });
+}
+
+function onSession() {
+  if (IS_HOST) { if (SES === null) hostCreate(); render(); return; }
+  const id = myId(), st = SES && SES.state;
+  if (SES && id && !(SES.teams && SES.teams[id])) setMyId(null);
+  if (SES && st && pendingName && !myId()) {
+    if (st.phase === "lobby") {
+      const nid = Math.random().toString(36).slice(2, 10);
+      setMyId(nid);
+      B.set(`${SP}/teams/${nid}`, { name: pendingName, joined: B.now() });
+      pendingName = null;
+    } else { joinError = "started"; pendingName = null; }
+  }
+  if (SES === null && pendingName) { joinError = "nosession"; pendingName = null; }
+  render();
+}
+
+/* ---------------- host actions ---------------- */
+let resolving = null;
+async function hostCreate() { resolving = null; await B.set(SP, { state: { phase: "lobby", createdAt: B.now() } }); }
+async function hostStartGame() {
+  const ts = teamsOf(SES).map(t => team(t.id, { name: t.name, joined: t.joined }));
+  if (!ts.length) return;
+  const up = { picks: null };
+  ts.forEach(t => up["teams/" + t.id] = serialize(t));
+  await B.update(SP, up);
+  await hostStartRound(0, ts);
+}
+async function hostStartRound(r, tsArg) {
+  const ts = tsArg || teamsOf(SES), rd = CONFIG.rounds[r], sh = CONFIG.shocks[r + 1] || null, up = {};
+  ts.filter(t => !t.out).forEach(t => {
+    if (sh) t.stock = Math.max(1, t.stock + sh.stock);
+    t.crashed = t.crashed || !!(rd.variant && rd.variant.when(t));
+    up["teams/" + t.id] = serialize(t);
+  });
+  up.state = { phase: "round", r, endsAt: B.now() + CONFIG.roundSeconds * 1000, pausedLeft: null,
+    order: CONFIG.shuffleOptions ? shuffle(KEYS.slice()) : KEYS.slice(), shock: sh };
+  await B.update(SP, up);
+}
+async function hostResolve() {
+  const r = SES.state.r; if (resolving === r) return; resolving = r;
+  const picks = picksFor(SES, r), up = {};
+  teamsOf(SES).filter(t => !t.out).forEach(t => { applyRound(t, r, picks[t.id]); up["teams/" + t.id] = serialize(t); });
+  up["state/phase"] = "result"; up["state/endsAt"] = null; up["state/pausedLeft"] = null;
+  await B.update(SP, up);
+}
+async function hostReveal() {
+  const up = {};
+  teamsOf(SES).forEach(t => { t.ending = CONFIG.endings.find(e => e.when(t)).letter; up["teams/" + t.id] = serialize(t); });
+  up["state/phase"] = "ending";
+  await B.update(SP, up);
+}
+const hostPhase = p => B.update(SP, { "state/phase": p });
+function hostPause() {
+  const st = SES.state;
+  if (st.pausedLeft != null) B.update(SP, { "state/endsAt": B.now() + st.pausedLeft, "state/pausedLeft": null });
+  else B.update(SP, { "state/pausedLeft": Math.max(0, st.endsAt - B.now()), "state/endsAt": null });
+}
+function hostAdd(ms) {
+  const st = SES.state;
+  if (st.pausedLeft != null) B.update(SP, { "state/pausedLeft": st.pausedLeft + ms });
+  else B.update(SP, { "state/endsAt": st.endsAt + ms });
+}
+setInterval(() => {
+  if (!B || !SES || !SES.state) return;
+  const st = SES.state;
+  if (IS_HOST && st.phase === "round" && st.pausedLeft == null && resolving !== st.r) {
+    const act = teamsOf(SES).filter(t => !t.out), pk = picksFor(SES, st.r);
+    if (B.now() >= st.endsAt || (act.length && act.every(t => pk[t.id]))) hostResolve();
+  }
+  tickTimers();
+}, 250);
+
+function secsLeft() {
+  const st = SES && SES.state; if (!st) return 0;
+  const ms = st.pausedLeft != null ? st.pausedLeft : (st.endsAt || 0) - B.now();
+  return Math.max(0, ms);
+}
+function tickTimers() {
+  if (!SES || !SES.state || SES.state.phase !== "round") return;
+  const ms = secsLeft(), f = ms / (CONFIG.roundSeconds * 1000);
+  document.querySelectorAll(".tbar").forEach(b => { b.style.width = Math.min(100, f * 100) + "%"; b.style.background = f < 0.25 ? "var(--danger)" : ""; });
+  document.querySelectorAll(".tnum").forEach(n => n.textContent = Math.ceil(ms / 1000) + (SES.state.pausedLeft != null ? " ⏸" : ""));
+}
+
+/* ---------------- shared view pieces ---------------- */
+function meters(t, r) {
+  const rr = Math.max(0, Math.min(r, NR - 1)), tg = target(rr), d = t.stock - CONFIG.start.stock;
+  return `<div class="meters">
+    <div class="meter"><div class="label">Stock price</div><div class="v">${money(t.stock)}</div>
+      <div class="label ${d >= 0 ? "up" : "down"}">${sgn(d, money)} since start</div></div>
+    <div class="meter"><div class="label">Wall Street target, decision ${rr + 1}</div><div class="v">${money(tg)}</div>
+      <div class="label">${t.stock >= tg ? "On target" : money(tg - t.stock) + " short"}</div></div>
+    <div class="meter"><div class="label">Risk of getting fired</div><div class="v ${t.fired >= 70 ? "down" : ""}">${Math.round(t.fired)}%</div>
+      <div class="bar risk"><i style="width:${t.fired}%"></i></div></div></div>`;
+}
+const timerRow = () => `<div class="timer"><div class="bar"><i class="tbar" style="width:100%"></i></div><b class="tnum">${CONFIG.roundSeconds}</b></div>`;
+const optList = (rd, order, chosen) => order.map((k, i) => { const o = rd.options[k];
+  return `<button class="opt ${chosen === k ? "sel" : ""}" data-k="${k}"><span class="k">${"ABC"[i]}</span><span><strong>${esc(o.label)}</strong><span>${esc(o.detail)}</span></span></button>`; }).join("");
+
+function scatterSvg(ts) {
+  const W = 900, H = 420, m = { l: 60, r: 24, t: 16, b: 46 };
+  const xs = ts.map(t => t.stock), xmin = Math.min(...xs, 80) - 10, xmax = Math.max(...xs, 140) + 10;
+  const ymin = Math.min(-20, ...ts.map(t => t.safety)), ymax = Math.max(130, ...ts.map(t => t.safety));
+  const X = v => m.l + (v - xmin) / (xmax - xmin) * (W - m.l - m.r), Y = v => H - m.b - (v - ymin) / (ymax - ymin) * (H - m.t - m.b);
+  let g = `<rect x="${m.l}" y="${Y(ymax)}" width="${W - m.l - m.r}" height="${Y(CONFIG.crashLine) - Y(ymax)}" fill="rgba(255,92,138,.12)"/>
+    <line x1="${m.l}" x2="${W - m.r}" y1="${Y(CONFIG.crashLine)}" y2="${Y(CONFIG.crashLine)}" stroke="#ff5c8a" stroke-dasharray="6 6"/>
+    <text x="${W - m.r - 6}" y="${Y(CONFIG.crashLine) - 8}" fill="#ff5c8a" font-size="16" text-anchor="end">Crash zone</text>
+    <line x1="${m.l}" x2="${W - m.r}" y1="${H - m.b}" y2="${H - m.b}" stroke="#24508a"/><line x1="${m.l}" x2="${m.l}" y1="${m.t}" y2="${H - m.b}" stroke="#24508a"/>
+    <text x="${(W + m.l) / 2}" y="${H - 8}" fill="#a9c1de" font-size="16" text-anchor="middle">Final stock price (what everyone saw)</text>
+    <text transform="translate(18 ${(H - m.b + m.t) / 2}) rotate(-90)" fill="#a9c1de" font-size="16" text-anchor="middle">Safety debt (hidden)</text>`;
+  for (let v = Math.ceil(xmin / 20) * 20; v <= xmax; v += 20) g += `<text x="${X(v)}" y="${H - m.b + 20}" fill="#a9c1de" font-size="14" text-anchor="middle">$${v}</text>`;
+  ts.forEach((t, i) => { const cx = X(t.stock), cy = Y(t.safety), left = cx > W - 200, c = t.safety >= CONFIG.crashLine ? "#ff5c8a" : "#8fd3ff";
+    g += `<circle cx="${cx}" cy="${cy}" r="10" fill="${c}" stroke="#0a2540" stroke-width="2"/>
+      ${ts.length > CONFIG.scatterLabelMax ? "" : `<text x="${cx + (left ? -16 : 16)}" y="${cy + 5 + (i % 2 ? 14 : 0)}" fill="#fff" font-size="16" text-anchor="${left ? "end" : "start"}">${esc(t.name)} · ${esc(t.ending || "")}</text>`}`; });
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Stock price against hidden safety debt per player" style="width:100%;height:auto;max-height:46vh">${g}</svg>`;
+}
+
+/* ---------------- group views ---------------- */
+function gJoin() {
+  const code = CODE || qs.get("s") || "";
+  const started = joinError === "started" && SES && SES.state;
+  const err = joinError === "nosession" ? "No game with that code yet. Check the code on the projector." : "";
+  const rejoin = started ? `<p>The game has started. If you already joined and lost the page, pick your name to rejoin:</p>
+    <div class="opts">${teamsOf(SES).map(t => `<button class="btn rejoin" data-id="${t.id}">${esc(t.name)}</button>`).join("")}</div>` : "";
+  return `<div class="card narrow">
+    <span class="tag">Join the game</span>
+    <h2>You are Boeing's leadership team.</h2>
+    <p>Use your own laptop or phone. Enter the game code from the projector and your name.</p>
+    <form id="joinForm">
+      <label class="label" for="code">Game code</label>
+      <input type="text" id="code" value="${esc(code)}" maxlength="12" autocomplete="off" autocapitalize="characters" required>
+      <label class="label" for="gname" style="margin-top:12px;display:block">Your name</label>
+      <input type="text" id="gname" maxlength="24" placeholder="First name" required>
+      ${err ? `<p class="down" style="margin-top:10px">${err}</p>` : ""}
+      <div style="margin-top:16px"><button class="btn primary" type="submit">Join</button></div>
+    </form>${rejoin}</div>`;
+}
+function gLobby(me) {
+  return `<div class="card narrow">
+    <span class="tag">You're in</span>
+    <h2>${esc(me.name)}, wait for the presenter to start.</h2>
+    <p>You'll face ${NR} decisions, ${CONFIG.roundSeconds} seconds each. Pick one option per decision.</p>
+    <div class="grid2">
+      <div class="mini"><b>Stock price</b><br>What shareholders see. Starts at ${money(CONFIG.start.stock)}.</div>
+      <div class="mini"><b>Wall Street target</b><br>Rises ${money(P.targetStep)} every decision. Fall short and the board gets nervous.</div>
+      <div class="mini"><b>Risk of getting fired</b><br>Hit 100% and the board replaces you. You're out.</div>
+    </div>
+    <p class="note">The projector ranks every player by stock price, live. If time runs out, the board decides for you.</p></div>`;
+}
+function gRound(me, st) {
+  const rd = CONFIG.rounds[st.r], v = rd.variant && me.crashed ? rd.variant : null;
+  const pick = picksFor(SES, st.r)[me.id];
+  return `${meters(me, st.r)}<div class="card">
+    ${st.shock ? `<div class="shock">${esc(st.shock.text)} Stock ${sgn(st.shock.stock, money)}.</div>` : ""}
+    <span class="tag">Decision ${st.r + 1} of ${NR} · ${esc(rd.part)}</span>
+    <h2 class="${v ? "down" : ""}">${esc(v ? v.title : rd.title)}</h2>
+    <p>${esc(v ? v.scenario : rd.scenario)}</p>
+    <div class="memo"><div class="from">Memo from the ${esc(rd.memo.from)}</div>“${esc(rd.memo.text)}”</div>
+    ${timerRow()}
+    ${pick ? `<div class="locked"><div class="big">Locked in: ${"ABC"[st.order.indexOf(pick)]}. ${esc(rd.options[pick].label)}</div><p class="label" style="margin:8px auto 0">Waiting for the other players…</p></div>`
+           : `<div class="opts">${optList(rd, st.order)}</div><p class="note" style="margin-top:12px">If time runs out, the board decides for you.</p>`}
+  </div>`;
+}
+function gResult(me, st) {
+  const L = me.last, rd = CONFIG.rounds[st.r];
+  if (!L || L.r !== st.r) return `<div class="card narrow"><h2>Calculating…</h2></div>`;
+  return `${meters(me, Math.min(st.r + 1, NR - 1))}<div class="card">
+    <span class="tag">Decision ${st.r + 1} result</span>
+    <h2>${L.timedOut ? "Time ran out. The board chose for you." : esc(rd.options[L.pick].label)}</h2>
+    <table><tr><th>Metric</th><th class="n">Change</th><th class="n">Now</th></tr>
+      <tr><td>Stock price</td><td class="n ${L.dStock >= 0 ? "up" : "down"}">${sgn(L.dStock, money)}</td><td class="n">${money(me.stock)}</td></tr>
+      <tr><td>Risk of getting fired</td><td class="n ${L.dFired <= 0 ? "up" : "down"}">${sgn(Math.round(L.dFired), x => x + " pts")}</td><td class="n">${Math.round(me.fired)}%</td></tr></table>
+    <p class="note" style="margin-top:10px">Fired risk moves with your choice and with how far your stock is below Wall Street's target. Look at the projector.</p></div>`;
+}
+function gFired(me) {
+  return `${meters(me, me.outRound ?? 0)}<div class="card narrow">
+    <span class="tag">After decision ${(me.outRound ?? 0) + 1}</span>
+    <h2 class="down">The board has replaced you.</h2>
+    <p>Your fired risk hit 100%. Watch the projector: everyone else keeps playing. Your ending is revealed at the end.</p></div>`;
+}
+function gEnding(me) {
+  const e = endingBy(me.ending); if (!e) return `<div class="card narrow"><h2>Revealing…</h2></div>`;
+  return `<div class="card">
+    <span class="tag">Your ending</span>
+    <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;margin-top:10px">
+      <div class="ending-letter ${e.bad ? "bad" : ""}">${e.letter}</div>
+      <div><h2 style="margin:0">${esc(e.title)}</h2><p style="margin:6px 0 0">${esc(e.text)}</p></div></div>
+    <div class="link"><div class="label">The Boeing link</div>${esc(e.link)}</div>
+    <div class="reveal"><h3>The meter you never saw: safety debt</h3>
+      <div class="bar"><i id="sbar" style="width:0%"></i></div>
+      <div style="display:flex;justify-content:space-between" class="label"><span>Safe</span><span>Crash zone (${CONFIG.crashLine}+)</span></div>
+      <p style="margin-top:8px">Your hidden safety debt: <b class="${me.safety >= CONFIG.crashLine ? "down" : ""}">${me.safety}</b>. Final stock ${money(me.stock)}${me.out ? " (fired after decision " + (me.outRound + 1) + ")" : ""}.</p></div>
+    <p class="note">Your letter is already on the projector.</p></div>`;
+}
+function gDebrief(me) {
+  const lab = (r, k) => CONFIG.rounds[r].options[k].label;
+  return `<div class="card"><span class="tag">Debrief</span><h2>Your decisions vs. Boeing's</h2>
+    <div class="grid2">${CONFIG.rounds.map((rd, r) => { const k = me.choices[r];
+      return `<div class="mini"><div class="label">${r + 1}. ${esc(rd.title)}</div>
+        <div>You: ${k ? esc(lab(r, k)) : "<span class='label'>(fired)</span>"}</div>
+        <div class="down">Boeing: ${esc(lab(r, rd.boeing.choice))}</div><div class="note">${esc(rd.boeing.fact)}</div></div>`; }).join("")}</div></div>`;
+}
+function renderGroup() {
+  const el = $("#main");
+  const id = myId(), st = SES && SES.state, me = SES && id && SES.teams && SES.teams[id] ? team(id, SES.teams[id]) : null;
+  let html;
+  if (!me || !st) html = (SES === undefined && CODE && pendingName) ? `<div class="card narrow"><h2>Joining…</h2></div>` : gJoin();
+  else if (st.phase === "lobby") html = gLobby(me);
+  else if (st.phase === "ending") html = gEnding(me);
+  else if (st.phase === "debrief") html = gDebrief(me);
+  else if (me.out) html = gFired(me);
+  else if (st.phase === "round") html = gRound(me, st);
+  else html = gResult(me, st);
+  el.innerHTML = html;
+  $("#sub").textContent = me ? `${me.name} · game ${CODE}` : "Group screen";
+  $("#joinForm")?.addEventListener("submit", e => { e.preventDefault(); joinError = ""; pendingName = $("#gname").value.trim() || "Player"; subscribe($("#code").value.trim()); render(); });
+  el.querySelectorAll(".rejoin").forEach(b => b.addEventListener("click", () => { setMyId(b.dataset.id); joinError = ""; render(); }));
+  el.querySelectorAll(".opt").forEach(b => b.addEventListener("click", () => {
+    if (!me || me.out || st.phase !== "round" || secsLeft() <= 0) return;
+    B.set(`${SP}/picks/${st.r}/${me.id}`, b.dataset.k);
+  }));
+  if (st && st.phase === "ending" && me) setTimeout(() => { const b = $("#sbar"); if (b) b.style.width = Math.max(2, Math.min(100, me.safety / 120 * 100)) + "%"; }, 200);
+}
+
+/* ---------------- host (projector) views ---------------- */
+function board(ts, st, showStatus) {
+  const pk = st.phase === "round" ? picksFor(SES, st.r) : {};
+  const all = ts.slice().sort((a, b) => (a.out - b.out) || (b.stock - a.stock)), rows = all.slice(0, CONFIG.leaderboardRows);
+  return `<table class="lb"><tr><th>#</th><th>Player</th><th class="n">Stock</th><th class="n">Fired risk</th><th class="n">Status</th></tr>
+    ${rows.map((t, i) => { const L = t.last && st.phase === "result" && t.last.r === st.r ? t.last : null;
+      const status = t.out ? '<span class="chip fired">Fired</span>' : showStatus ? (pk[t.id] ? '<span class="chip ok">Locked</span>' : '<span class="chip">Thinking</span>') : (t.ending ? `<span class="chip">${t.ending}</span>` : "");
+      return `<tr class="${t.out ? "out" : ""}"><td>${i + 1}</td><td>${esc(t.name)}</td>
+        <td class="n">${money(t.stock)}${L ? ` <span class="${L.dStock >= 0 ? "up" : "down"} small">${sgn(L.dStock, money)}</span>` : ""}</td>
+        <td class="n ${t.fired >= 70 ? "down" : ""}">${Math.round(t.fired)}%</td><td class="n">${status}</td></tr>`; }).join("")}</table>
+    <p class="note">${all.length > rows.length ? `Top ${rows.length} of ${all.length}. ` : ""}Ranked by stock price. That's all Wall Street sees.</p>`;
+}
+function hLobby(ts) {
+  const url = baseUrl + "?s=" + encodeURIComponent(CODE);
+  let qr = "";
+  try { if (window.qrcode) { const q = qrcode(0, "M"); q.addData(url); q.make(); qr = q.createSvgTag({ cellSize: 8, margin: 2, scalable: true }); } } catch {}
+  return `<div class="hostgrid"><div class="card">
+      <span class="tag">Join the game</span>
+      <h2 class="huge">Grab your laptop or phone.</h2>
+      <p class="big">Scan the code or open<br><b class="sky">${esc(url.replace(/^https?:\/\//, ""))}</b></p>
+      <p class="big">Game code <b class="code">${esc(CODE)}</b></p>
+    </div>
+    <div class="card qr">${qr || `<p class="label">QR code needs internet. Use the link.</p>`}</div></div>
+    <div class="card" style="margin-top:20px"><h3>${ts.length} player${ts.length === 1 ? "" : "s"} joined</h3>
+      <div class="chips">${ts.map(t => `<span class="gchip">${esc(t.name)} <button class="x" data-id="${t.id}" aria-label="Remove ${esc(t.name)}">×</button></span>`).join("") || `<span class="label">Waiting for players…</span>`}</div></div>`;
+}
+function hRound(ts, st) {
+  const rd = CONFIG.rounds[st.r], act = ts.filter(t => !t.out), pk = picksFor(SES, st.r);
+  return `<div class="hostgrid"><div class="card">
+      ${st.shock ? `<div class="shock">${esc(st.shock.text)} Stock ${sgn(st.shock.stock, money)} for everyone.</div>` : ""}
+      <span class="tag">Decision ${st.r + 1} of ${NR} · ${esc(rd.part)}</span>
+      <h2 class="huge">${esc(rd.title)}</h2><p class="big">${esc(rd.scenario)}</p>
+      <div class="memo"><div class="from">Memo from the ${esc(rd.memo.from)}</div>“${esc(rd.memo.text)}”</div>
+      <div class="opts static">${optList(rd, st.order)}</div></div>
+    <div class="card"><div class="count"><span class="tnum">${CONFIG.roundSeconds}</span></div>
+      <div class="bar" style="margin:8px 0 6px"><i class="tbar" style="width:100%"></i></div>
+      <div class="label">${act.filter(t => pk[t.id]).length} of ${act.length} players locked in</div>
+      ${board(ts, st, true)}</div></div>`;
+}
+function hResult(ts, st) {
+  const fired = ts.filter(t => t.out && t.outRound === st.r);
+  return `<div class="hostgrid"><div class="card">
+      <span class="tag">After decision ${st.r + 1} of ${NR}</span>
+      <h2 class="huge">${st.r + 1 < NR ? `Next Wall Street target: ${money(target(st.r + 1))}` : "The last decision is in."}</h2>
+      ${fired.length ? `<div class="shock big">The board has replaced: ${fired.map(t => esc(t.name)).join(", ")}.</div>` : ""}
+      <p class="big">${st.r + 1 < NR ? `The target rises ${money(P.targetStep)} every decision. Players below it move closer to being fired.` : "Every player's ending is decided. Time to see what the meters didn't show."}</p></div>
+    <div class="card">${board(ts, st, false)}</div></div>`;
+}
+function hEnding(ts) {
+  return `<div class="card"><span class="tag">The reveal</span>
+    <h2 class="huge">Everyone watched the stock. Nobody saw the risk.</h2>
+    ${scatterSvg(ts)}
+    <table class="lb"><tr><th>Ending</th><th class="n">Players</th><th class="n">Avg stock</th><th class="n">Avg safety debt</th></tr>
+      ${CONFIG.endings.map(e => { const g = ts.filter(t => t.ending === e.letter); if (!g.length) return "";
+        const avg = f => g.reduce((a, t) => a + f(t), 0) / g.length;
+        return `<tr><td><b>${e.letter}</b> · ${esc(e.title)}</td><td class="n">${g.length}</td><td class="n">${money(avg(t => t.stock))}</td><td class="n ${avg(t => t.safety) >= CONFIG.crashLine ? "down" : ""}">${Math.round(avg(t => t.safety))}</td></tr>`; }).join("")}</table></div>`;
+}
+function hDebrief(ts) {
+  const lab = (r, k) => CONFIG.rounds[r].options[k].label;
+  return `<div class="hostgrid"><div class="card"><span class="tag">Discuss</span>
+      <ol class="prompts">${CONFIG.debriefPrompts.map(q => `<li>${esc(q)}</li>`).join("")}</ol></div>
+    <div class="card"><h3>What the class chose vs. what Boeing did</h3>
+      <table class="lb"><tr><th>Decision</th><th class="n">Wall St</th><th class="n">Middle</th><th class="n">Engineer</th></tr>
+      ${CONFIG.rounds.map((rd, r) => { const c = { street: 0, middle: 0, engineer: 0 }; ts.forEach(t => { if (t.choices[r]) c[t.choices[r]]++; });
+        return `<tr><td>${r + 1}. ${esc(rd.title)}</td>${KEYS.map(k => `<td class="n ${rd.boeing.choice === k ? "boeing" : ""}">${c[k]}</td>`).join("")}</tr>`; }).join("")}</table>
+      <p class="note"><span class="boeing">Highlighted</span> = what Boeing did.</p></div></div>`;
+}
+function hostControls(st, ts) {
+  const b = (id, txt, cls = "") => `<button class="btn ${cls}" id="${id}">${txt}</button>`;
+  const p = st ? st.phase : "lobby";
+  let c = "";
+  if (p === "lobby") c = b("hStart", `Start decision 1 (${ts.length} players)`, "primary");
+  if (p === "round") c = b("hPause", st.pausedLeft != null ? "Resume" : "Pause") + b("hAdd", "+15s") + b("hEnd", "End decision now", "primary");
+  if (p === "result") c = st.r + 1 < NR ? b("hNext", `Start decision ${st.r + 2}`, "primary") : b("hReveal", "Reveal endings", "primary");
+  if (p === "ending") c = b("hDebrief", "Open debrief", "primary");
+  if (p === "debrief") c = b("hBack", "Back to reveal");
+  return c + b("hReset", "Reset game", "ghost");
+}
+function renderHost() {
+  const el = $("#main"); $("#sub").textContent = `Projector · game ${CODE}`;
+  if (!SES || !SES.state) { el.innerHTML = `<div class="card"><h2>Starting game ${esc(CODE)}…</h2></div>`; return; }
+  const st = SES.state, ts = teamsOf(SES);
+  const views = { lobby: () => hLobby(ts), round: () => hRound(ts, st), result: () => hResult(ts, st), ending: () => hEnding(ts), debrief: () => hDebrief(ts) };
+  el.innerHTML = views[st.phase]();
+  $("#controls").innerHTML = hostControls(st, ts);
+  const on = (id, fn) => { const x = document.getElementById(id); if (x) x.onclick = fn; };
+  on("hStart", hostStartGame); on("hPause", hostPause); on("hAdd", () => hostAdd(15000));
+  on("hEnd", () => B.update(SP, st.pausedLeft != null ? { "state/pausedLeft": 0 } : { "state/endsAt": B.now() }));
+  on("hNext", () => hostStartRound(st.r + 1)); on("hReveal", hostReveal);
+  on("hDebrief", () => hostPhase("debrief")); on("hBack", () => hostPhase("ending"));
+  on("hReset", () => { if (confirm("Reset the game? All players go back to the join screen.")) hostCreate(); });
+  el.querySelectorAll(".x").forEach(x => x.onclick = () => B.set(`${SP}/teams/${x.dataset.id}`, null));
+}
+
+function render() { (IS_HOST ? renderHost : renderGroup)(); tickTimers(); }
+
+/* ---------------- boot ---------------- */
+onConn = ok => { const d = $("#conn"); if (d) { d.className = "conn " + (ok ? "ok" : "bad"); d.textContent = B && B.mode === "demo" ? "Demo mode (this browser only)" : ok ? "Live" : "Reconnecting…"; } };
+(async () => {
+  document.body.classList.toggle("host", IS_HOST);
+  try { B = await makeBackend(); }
+  catch { $("#main").innerHTML = `<div class="card narrow"><h2>Can't reach the game server.</h2><p>Check the internet connection and reload.</p></div>`; return; }
+  onConn(B.mode === "demo");
+  if (IS_HOST) subscribe(qs.get("s") || CONFIG.sessionCode);
+  else if (qs.get("s") && (() => { CODE = qs.get("s").toUpperCase(); return myId(); })()) subscribe(qs.get("s"));
+  render();
+})();
+}
+</script>
+</body>
+</html>
